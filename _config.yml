@@ -1,3 +1,4 @@
 theme: minima
-title: ricky4ever
-author: ricky
+relative_links:
+  enabled: true
+  collections: true
