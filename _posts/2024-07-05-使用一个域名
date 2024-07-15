@@ -1,0 +1,92 @@
+---
+title: 使用一个域名
+date created: 2024-07-12 18:54:12
+date modified: 2024-07-12 19:03:42
+date: 2024-07-05
+---
+
+# 1. 购买域名
+
+# 2. 配置dns
+
+## 设置dns
+
+https://dash.cloudflare.com/  
+添加A类型的记录，二级域名指向自己的服务器
+
+## 添加到域名服务商
+
+将服务商中默认的dns改为cf的dns
+
+# 3. nginx反向代理
+
+在服务器上部署[[nginx]]， 添加配置文件  
+`vim /etc/nginx/nginx.conf`
+
+```bash
+	server {
+        listen 80;
+        server_name blogricky.com;
+        root /root/www/webpage;
+        index index.html;
+#        return 301 https://$host$request_uri;
+    }
+    server {
+        listen 9980;
+        server_name blogricky.com;
+        root /root/www/webpage;
+        index index.html;
+#        return 301 https://$host$request_uri;
+    }
+```
+
+转发到自己的服务上，这里用的是一个简单的网页
+
+```html
+<html lang="">
+  <!-- Text between angle brackets is an HTML tag and is not displayed.
+        Most tags, such as the HTML and /HTML tags that surround the contents of
+        a page, come in pairs; some tags, like HR, for a horizontal rule, stand
+        alone. Comments, such as the text you're reading, are not displayed when
+        the Web page is shown. The information between the HEAD and /HEAD tags is
+        not displayed. The information between the BODY and /BODY tags is displayed.-->
+  <head>
+    <title>Enter a title, displayed at the top of the window.</title>
+  </head>
+  <!-- The information between the BODY and /BODY tags is displayed.-->
+  <body>
+    <h1>Enter the main heading, usually the same as the title.</h1>
+    <p>Be <b>bold</b> in stating your key points. Put them in a list:</p>
+    <ul>
+      <li>The first item in your list</li>
+      <li>The second item; <i>italicize</i> key words</li>
+    </ul>
+    <p>Improve your image by including an image.</p>
+    <p>
+      <img src="https://i.imgur.com/SEBww.jpg" alt="A Great HTML Resource" />
+    </p>
+    <p>
+      Add a link to your favorite
+      <a href="https://www.dummies.com/">Web site</a>. Break up your page
+      with a horizontal rule or two.
+    </p>
+    <hr />
+    <p>
+      Finally, link to <a href="page2.html">another page</a> in your own Web
+      site.
+    </p>
+    <!-- And add a copyright notice.-->
+    <p>&#169; Wiley Publishing, 2011</p>
+  </body>
+</html>
+```
+
+# 4. 域名需要备案
+
+[[绕过备案访问后端网站]]
+
+# 5. 使用xray加速 cf tunnel
+
+## 安装xray
+
+## 域名配置证书
