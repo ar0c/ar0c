@@ -12,7 +12,7 @@
     1. 客户点需要安装cloudflared
     2. .ssh/config需要手动配置
 
-# 方案3步骤
+# 方案2步骤
 环境 alpine + k3s, ssh域名为ssh.example.com git域名为git.example.com
 
 ```bash
