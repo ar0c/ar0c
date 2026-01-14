@@ -1,42 +1,138 @@
 ---
-uid: 2b9aa21d-17e6-4628-80a7-22a5b216d161
-share: true
 sharetitle: date-title
-title: 精准测试
-date: 2024-07-31
-date modified: 2026-01-13
+share: true
+title: neo4j初识
+date: 2024-07-22
+date modified: 2026-01-14
 ---
 
-# 目的
+# 1. docker安装neo4j
 
-版本提测后，开发往往会说，影响范围比较大，做个主链路或者全量回归吧，我只改了几行代码，为什么要回归这么长时间？等等。
+[neo4j - Official Image | Docker Hub](https://hub.docker.com/_/neo4j)
 
-测试完成后，测试往往会说，测试保证测试用例全部执行到位，考虑不到的没办法。
+# 2. 启动
 
-代码改动后的 **影响范围评估**，以及测试完成后的 **覆盖面评估** 是个难题，目前大部分是依靠个人经验和业务熟悉度判断大概的范围。
+```bash
+docker run -p 7474:7474 -p 7687:7687 run neo4j
+# 如果开发环境不需要登录 则加上--env=NEO4J_AUTH=none
+```
 
-这种评估方式以主观判断为主，缺乏数据支撑，希望能有系统工具提供客观数据，基于数据进行量化评估。
+# 3. 连接
 
-> 覆盖率只能表明代码是否覆盖，无法确保逻辑正确，且无法确保当前代码对所有调用方否符合预期
+默认的连接和账号密码  
+http://localhost:7474  
+user: neo4j passd: neo4j
 
-# 预期流程
+# 语法
 
-需求修改代码 --> git diff 找到修改的文件、函数、变量 --> 找到函数上游的调用 --> 找到影响的接口 --> 找到相关的测试用例
+通过内置教程摸索学习
 
-# 依赖数据
+## 建表
 
-1. 代码调用链  
-	 包含的内容
-	 - 函数
-	 - 包名
-2. ast解析  
-	补充信息
-	- 函数所在文件
+```cypher
+CREATE (TheMatrix:Movie {title:'The Matrix', released:1999, tagline:'Welcome to the Real World'})
 
-进一步：  
+      CREATE (Keanu:Person {name:'Keanu Reeves', born:1964})
 
-- **解析rpc调用，找到调用的rpc和gateway生成的接口path（找到http接口）
-- 分支的条件（提高用例推荐的准确性）
+      CREATE
 
-> [精准测试体系构建-腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/2321877)
+      (Keanu)-[:ACTED_IN {roles:['Neo']}]->(TheMatrix),
 
+      CREATE (Emil:Person {name:"Emil Eifrem", born:1978})
+
+      CREATE (Emil)-[:ACTED_IN {roles:["Emil"]}]->(TheMatrix)
+       // 显示一部分数据
+      WITH TomH as a
+
+      MATCH (a)-[:ACTED_IN]->(m)<-[:DIRECTED]-(d) RETURN a,m,d LIMIT 10;
+```
+
+1. 创建节点 `CREATE (TheMatrix:Movie {title:'The Matrix', released:1999, tagline:'Welcome to the Real World'})`， TheMatrix为名字，Movie为对象，`{}`中为属性和赋值
+2. 创建关系 ` (Keanu)-[:ACTED_IN {roles:['Neo']}]->(TheMatrix)`， `-[]->`表示指向，`[]`中为关系对象，对象中包含属性
+
+## 创建约束
+
+```cypher
+CREATE CONSTRAINT FOR (n:Movie) REQUIRE (n.title) IS UNIQUE
+```
+
+Movie对象必须包含title属性，且唯一
+
+## 建立索引
+
+```cypher
+CREATE INDEX FOR (m:Movie) ON (m.released)
+```
+
+## match 匹配
+
+match是最基本的用法，用于传递一个模式，最后需要使用return返回结果，如
+
+```cypher
+MATCH (tom:Person {name: "Tom Hanks"}) RETURN tom
+```
+
+表示匹配name为Tom Hanks的节点，并返回这个对象
+
+```cypher
+MATCH (nineties:Movie) WHERE nineties.released >= 1990 AND nineties.released < 2000 RETURN nineties.title
+```
+
+然后可以使用where语句进行筛选
+
+---
+
+```cypher
+MATCH (tom:Person {name: "Tom Hanks"})-[:ACTED_IN]->(tomHanksMovies) RETURN tom,tomHanksMovies
+```
+
+该语句表示Tom Hanks 出演的所有电影。  
+`-[]->` 模式匹配了关系的方向，`[]`中匹配关系，`:`是变量和类型的分隔符，此处即没有变量。
+
+```cypher
+MATCH (tom:Person {name:"Tom Hanks"})-[:ACTED_IN]->(m)<-[:ACTED_IN]-(coActors) RETURN DISTINCT coActors.name
+```
+
+表示Tom Hank出演的电影的其他演员
+
+## 距离模式
+
+```cypher
+MATCH (bacon:Person {name:"Kevin Bacon"})-[*2]-(hollywood)
+RETURN DISTINCT hollywood
+```
+
+通过`[*1]` 可以查询到与bacon相距1条链路的节点，通过`[*1…4]`可以查询据bacon相距1-4条链路的节点
+
+## 最短路径
+
+```cypher
+MATCH p=shortestPath(
+    (bacon:Person {name:"Kevin Bacon"})-[*]-(meg:Person {name:"Meg Ryan"})
+)
+RETURN p
+```
+
+找到Kevin Bacon到Meg Ryan的最小路径，不限制关系
+
+## 小练习
+
+找到TomHanks合作演员的合作演员，并查询与TomHanks没有直接关系的双重合作演员，并计算他们有多陌生（距离多远）
+
+```cypher
+MATCH (tom:Person {name:"Tom Hanks"})-[:ACTED_IN]->(m)<-[:ACTED_IN]-(coActors),
+
+    (coActors)-[:ACTED_IN]->(m2)<-[:ACTED_IN]-(cocoActors)
+
+  WHERE NOT (tom)-[:ACTED_IN]->()<-[:ACTED_IN]-(cocoActors) AND tom <> cocoActors
+
+  RETURN cocoActors.name AS Recommended, count(*) AS Strength ORDER BY Strength DESC
+```
+
+## 删除
+
+删除所有关系和节点
+
+```cypher
+MATCH (n) DETACH DELETE n
+```
